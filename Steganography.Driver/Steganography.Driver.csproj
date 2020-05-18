@@ -1,8 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
-
+  <ItemGroup>
+    <PackageReference Include="Conzole" Version="0.4.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Steganography.Core\Steganography.Core.csproj" />
+  </ItemGroup>
 </Project>
