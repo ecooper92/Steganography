@@ -18,7 +18,11 @@ namespace Steganography.Core
             using (var image = (Image<Rgba32>)Image<Rgba32>.Load(srcImagePath))
             {
                 var pixels = SelectPixels(seed, image.Bounds(), data.Length);
+
+                // Write the length of the data into the bottom left corner of the image.
                 WriteInt32AverageBlock(image, data.Length, 1, image.Height - 2);
+
+                // Write the random seed used to select pixels into the bottom right corner of the image.
                 WriteInt32AverageBlock(image, seed, image.Width - 2, image.Height - 2);
 
                 for (int i = 0; i < pixels.Length; i++)
@@ -64,21 +68,32 @@ namespace Steganography.Core
         }
 
         /// <summary>
+        /// Shrinks the possible color values from [0:255] to [(size / 2):(255 - (size / 2))].
+        /// </summary>
+        private Rgba32 ShrinkColorRange(Rgba32 color, int size)
+        {
+            var half = size / 2;
+            var r = (byte)Scale(color.R, 0, 255, half, 255 - half);
+            var g = (byte)Scale(color.G, 0, 255, half, 255 - half);
+            var b = (byte)Scale(color.B, 0, 255, half, 255 - half);
+            return new Rgba32(r, g, b);
+        }
+
+        /// <summary>
         /// Average the provided colors and scale the range.
         /// </summary>
-        private Rgba32 GetColorAverage(IEnumerable<Rgba32> colors, int size)
+        private Rgba32 GetColorAverage(IEnumerable<Rgba32> colors)
         {
             int rSum = 0;
             int gSum = 0;
             int bSum = 0;
             int length = 0;
 
-            var half = size / 2;
             foreach (var color in colors)
             {
-                rSum += (byte)Scale(color.R, 0, 255, half, 255 - half);
-                gSum += (byte)Scale(color.G, 0, 255, half, 255 - half);
-                bSum += (byte)Scale(color.B, 0, 255, half, 255 - half);
+                rSum += color.R;
+                gSum += color.G;
+                bSum += color.B;
                 length++;
             }
 
@@ -194,7 +209,7 @@ namespace Steganography.Core
         private void WriteAveragePixel(Image<Rgba32> image, int x, int y, byte value)
         {
             var pixels = GetSurroundingPixels(image, x, y);
-            var average = GetColorAverage(pixels, 8);
+            var average = ShrinkColorRange(GetColorAverage(pixels), 8);
 
             var rOffset = (value >> 6) & 7;
             var gOffset = (value >> 3) & 7;
@@ -212,7 +227,7 @@ namespace Steganography.Core
         private byte ReadAveragePixel(Image<Rgba32> image, int x, int y)
         {            
             var pixels = GetSurroundingPixels(image, x, y);
-            var average = GetColorAverage(pixels, 8);
+            var average = ShrinkColorRange(GetColorAverage(pixels), 8);
 
             var rowData = image.GetPixelRowSpan(y);
             var rOffset = rowData[x].R - average.R + 2;
